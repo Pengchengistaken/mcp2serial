@@ -67,7 +67,7 @@ class Config:
     baud_rate: int = 115200
     timeout: float = 1.0
     read_timeout: float = 1.0
-    response_start_string: str = "OK"  # 新增：可配置的应答开始字符串
+    response_start_string: Optional[str] = "OK"  # 可配置的应答开始字符串，设为空字符串或null则跳过检查
     commands: Dict[str, Command] = field(default_factory=dict)
 
     @staticmethod
@@ -105,11 +105,13 @@ class Config:
                         baud_rate=serial_config.get('baud_rate', 115200),
                         timeout=serial_config.get('timeout', 1.0),
                         read_timeout=serial_config.get('read_timeout', 1.0),
-                        response_start_string=serial_config.get('response_start_string', 'OK')  # 新增：加载应答开始字符串
+                        response_start_string=serial_config.get('response_start_string', 'OK') or None  # 加载应答开始字符串，空字符串转为None
                     )
 
                     # Load commands
                     commands_data = config_data.get('commands', {})
+                    if commands_data is None:
+                        commands_data = {}
                     for cmd_id, cmd_data in commands_data.items():
                         raw_command = cmd_data.get('command', '')
                         logger.debug(f"Loading command {cmd_id}: {repr(raw_command)}")
@@ -248,13 +250,24 @@ class SerialConnection:
                 # 等待一段时间确保命令被处理
                 time.sleep(0.1)
 
-                # 读取所有响应
+                # 读取所有响应（支持持续打印）
                 responses = []
-                while self.serial_port.in_waiting:
-                    response = self.serial_port.readline()
-                    logger.info(f"Raw response: {response}")
-                    if response:
-                        responses.append(response)
+                start_time = time.time()
+                last_response_time = start_time
+                
+                # 持续读取直到超时或连续一段时间没有新数据
+                while (time.time() - start_time) < self.read_timeout:
+                    if self.serial_port.in_waiting:
+                        response = self.serial_port.readline()
+                        logger.info(f"Raw response: {response}")
+                        if response:
+                            responses.append(response)
+                            last_response_time = time.time()
+                    else:
+                        # 如果没有新数据，等待一小段时间
+                        if (time.time() - last_response_time) > 0.1:  # 100ms内没有新数据，认为响应完成
+                            break
+                        time.sleep(0.01)  # 短暂等待
 
             if not responses:
                 logger.error("No response received within timeout")
@@ -270,37 +283,76 @@ class SerialConnection:
                     text=error_msg
                 )]
 
-            # 解码第一行响应
-            first_response = responses[0]
-            first_line = first_response.decode().strip()
-            logger.info(f"Decoded first response: {first_line}")
+            # 处理响应
+            # 如果配置了 response_start_string，则检查响应格式
+            # 如果没有配置（为None或空），则直接处理响应内容
+            
+            if config.response_start_string:
+                # 有配置响应检查字符串的情况
+                # 解码第一行响应（可能是命令回显）
+                first_response = responses[0]
+                first_line = first_response.decode().strip()
+                logger.info(f"Decoded first response: {first_line}")
 
-            # 检查是否有第二行响应
-            if len(responses) > 1:
-                second_response = responses[1]
-                if second_response.startswith(config.response_start_string.encode()):  # 使用配置的应答开始字符串
-                    if command.need_parse:
-                        return [types.TextContent(
-                            type="text",
-                            text=second_response.decode().strip()
-                        )]
+                # 检查是否有第二行响应
+                if len(responses) > 1:
+                    second_response = responses[1]
+                    if second_response.startswith(config.response_start_string.encode()):
+                        # 匹配成功标识符
+                        if command.need_parse:
+                            # 需要解析：返回所有响应内容（跳过可能的命令回显）
+                            all_responses = []
+                            for resp in responses[1:]:  # 跳过第一行（可能是命令回显）
+                                decoded = resp.decode().strip()
+                                if decoded:  # 跳过空行
+                                    all_responses.append(decoded)
+                            return [types.TextContent(
+                                type="text",
+                                text="\n".join(all_responses) if all_responses else ""
+                            )]
+                        return []  # 不需要解析，成功即可
+
+                # 如果响应不是预期的格式，返回详细的错误信息
+                error_msg = f"[MCP2Serial v{VERSION}] Command execution failed.\n"
+                error_msg += f"Command sent: {cmd_str.strip()}\n"
+                error_msg += f"Command bytes ({len(cmd_bytes)} bytes): {' '.join([f'0x{b:02X}' for b in cmd_bytes])}\n"
+                error_msg += "Responses received:\n"
+                for i, resp in enumerate(responses, 1):
+                    error_msg += f"{i}. Raw: {resp!r}\n   Decoded: {resp.decode().strip()}\n"
+                error_msg += "\nPossible reasons:\n"
+                error_msg += f"- Device echoed the command but did not send {config.response_start_string} response\n"
+                error_msg += "- Command format may be incorrect\n"
+                error_msg += "- Device may be in wrong mode\n"
+                return [types.TextContent(
+                    type="text",
+                    text=error_msg
+                )]
+            else:
+                # 没有配置响应检查字符串：直接处理所有响应
+                logger.info("No response_start_string configured, processing all responses directly")
+                
+                if command.need_parse:
+                    # 需要解析：返回所有响应内容
+                    all_responses = []
+                    for resp in responses:
+                        decoded = resp.decode().strip()
+                        # 跳过可能的命令回显（第一行如果和发送的命令相同）
+                        if decoded and decoded != cmd_str.strip():
+                            all_responses.append(decoded)
+                        elif decoded:  # 即使相同也添加，但记录日志
+                            logger.debug(f"Skipping possible command echo: {decoded}")
+                            # 如果只有一行且是命令回显，仍然添加（可能是设备只返回回显）
+                            if len(responses) == 1:
+                                all_responses.append(decoded)
+                    
+                    return [types.TextContent(
+                        type="text",
+                        text="\n".join(all_responses) if all_responses else ""
+                    )]
+                else:
+                    # 不需要解析：只要有响应就认为成功
+                    logger.info(f"Command executed successfully, received {len(responses)} response line(s)")
                     return []
-
-            # 如果响应不是预期的格式，返回详细的错误信息
-            error_msg = f"[MCP2Serial v{VERSION}] Command execution failed.\n"
-            error_msg += f"Command sent: {cmd_str.strip()}\n"
-            error_msg += f"Command bytes ({len(cmd_bytes)} bytes): {' '.join([f'0x{b:02X}' for b in cmd_bytes])}\n"
-            error_msg += "Responses received:\n"
-            for i, resp in enumerate(responses, 1):
-                error_msg += f"{i}. Raw: {resp!r}\n   Decoded: {resp.decode().strip()}\n"
-            error_msg += "\nPossible reasons:\n"
-            error_msg += f"- Device echoed the command but did not send {config.response_start_string} response\n"
-            error_msg += "- Command format may be incorrect\n"
-            error_msg += "- Device may be in wrong mode\n"
-            return [types.TextContent(
-                type="text",
-                text=error_msg
-            )]
 
         except serial.SerialTimeoutException as e:
             logger.error(f"Serial timeout: {str(e)}")
