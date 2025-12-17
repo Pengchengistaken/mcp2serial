@@ -15,3 +15,461 @@ commands:
       - "发送 ls -l 命令"
       - "执行 ls -l"
 
+  # 持续输出命令示例（如 logcat）
+  # 注意：由于 MCP 协议限制，Cursor 会等待完整响应后才显示，不会实时流式显示
+  logcat:
+    command: "logcat"  # 持续输出日志的命令
+    need_parse: true  # 需要解析响应内容
+    streaming: true  # 标记为持续输出命令
+    streaming_timeout: 10.0  # 持续输出命令的读取超时时间（秒），默认10秒
+    prompts:
+      - "查看日志"
+      - "显示 logcat 输出"
+      - "运行 logcat"
+
+  # 获取USB设备信息（串口已有root权限）
+  get_usb_devices:
+    command: "lsusb"  # 执行lsusb命令获取USB设备列表
+    need_parse: true
+    prompts:
+      - "获取USB设备信息"
+      - "列出USB设备"
+      - "查看USB设备列表"
+
+  # 获取USB设备详细信息（串口已有root权限）
+  get_usb_devices_detail:
+    command: "cat /proc/bus/usb/devices"  # 获取USB设备详细信息
+    need_parse: true
+    prompts:
+      - "获取USB设备详细信息"
+      - "查看USB设备详情"
+
+  # 获取串口设备列表
+  get_serial_devices:
+    command: "ls -l /dev/tty*"  # 列出所有串口设备
+    need_parse: true
+    prompts:
+      - "获取串口设备列表"
+      - "列出串口设备"
+      - "查看串口设备"
+
+  # 获取系统设备信息（串口已有root权限）
+  get_system_devices:
+    command: "lsblk"  # 列出块设备
+    need_parse: true
+    prompts:
+      - "获取系统设备信息"
+      - "列出块设备"
+      - "查看系统设备"
+
+  # 获取PCI设备信息（串口已有root权限）
+  get_pci_devices:
+    command: "lspci"  # 列出PCI设备
+    need_parse: true
+    prompts:
+      - "获取PCI设备信息"
+      - "列出PCI设备"
+      - "查看PCI设备"
+
+  # 获取USB设备内核消息（串口已有root权限）
+  get_usb_dmesg:
+    command: "dmesg | grep -i usb | tail -50"  # 查看USB相关的内核消息
+    need_parse: true
+    prompts:
+      - "获取USB设备内核消息"
+      - "查看USB dmesg"
+      - "USB设备日志"
+
+  # ========== Android Kernel 调试命令 ==========
+  
+  # 查看完整内核日志（串口已有root权限）
+  get_dmesg:
+    command: "dmesg"  # 查看完整内核日志
+    need_parse: true
+    streaming: true
+    streaming_timeout: 5.0
+    prompts:
+      - "查看内核日志"
+      - "显示 dmesg"
+      - "查看 dmesg 输出"
+      - "内核消息"
+
+  # 查看最近的内核日志（串口已有root权限）
+  get_dmesg_tail:
+    command: "dmesg | tail -100"  # 查看最近100条内核日志
+    need_parse: true
+    prompts:
+      - "查看最近的内核日志"
+      - "显示最近的 dmesg"
+      - "最新的内核消息"
+
+  # 实时内核消息（串口已有root权限）
+  get_kmsg:
+    command: "cat /proc/kmsg"  # 实时内核消息
+    need_parse: true
+    streaming: true
+    streaming_timeout: 10.0
+    prompts:
+      - "查看实时内核消息"
+      - "显示 kmsg"
+      - "实时内核日志"
+
+  # 查看CPU信息（串口已有root权限）
+  get_cpuinfo:
+    command: "cat /proc/cpuinfo"  # CPU信息
+    need_parse: true
+    prompts:
+      - "查看CPU信息"
+      - "显示CPU详情"
+      - "CPU信息"
+      - "处理器信息"
+
+  # 查看内存信息（串口已有root权限）
+  get_meminfo:
+    command: "cat /proc/meminfo"  # 内存信息
+    need_parse: true
+    prompts:
+      - "查看内存信息"
+      - "显示内存详情"
+      - "内存使用情况"
+      - "meminfo"
+
+  # 查看内核版本（串口已有root权限）
+  get_kernel_version:
+    command: "cat /proc/version"  # 内核版本信息
+    need_parse: true
+    prompts:
+      - "查看内核版本"
+      - "显示内核版本"
+      - "内核版本信息"
+      - "系统版本"
+
+  # 查看已加载的内核模块（串口已有root权限）
+  get_lsmod:
+    command: "lsmod"  # 已加载的内核模块列表
+    need_parse: true
+    prompts:
+      - "查看内核模块"
+      - "列出已加载的模块"
+      - "显示内核模块列表"
+      - "lsmod"
+
+  # 查看内核模块详细信息（串口已有root权限）
+  get_modules:
+    command: "cat /proc/modules"  # 内核模块详细信息
+    need_parse: true
+    prompts:
+      - "查看内核模块详情"
+      - "显示模块详细信息"
+      - "内核模块信息"
+
+  # 查看中断信息（串口已有root权限）
+  get_interrupts:
+    command: "cat /proc/interrupts"  # 中断统计信息
+    need_parse: true
+    prompts:
+      - "查看中断信息"
+      - "显示中断统计"
+      - "中断详情"
+      - "interrupts"
+
+  # 查看IO内存映射（串口已有root权限）
+  get_iomem:
+    command: "cat /proc/iomem"  # IO内存映射
+    need_parse: true
+    prompts:
+      - "查看IO内存映射"
+      - "显示内存映射"
+      - "iomem信息"
+
+  # 查看IO端口（串口已有root权限）
+  get_ioports:
+    command: "cat /proc/ioports"  # IO端口信息
+    need_parse: true
+    prompts:
+      - "查看IO端口"
+      - "显示IO端口信息"
+      - "ioports"
+
+  # 查看进程列表（串口已有root权限）
+  get_processes:
+    command: "ps aux"  # 所有进程列表
+    need_parse: true
+    prompts:
+      - "查看所有进程"
+      - "显示进程列表"
+      - "进程信息"
+      - "ps aux"
+
+  # 查看进程树（串口已有root权限）
+  get_process_tree:
+    command: "pstree"  # 进程树
+    need_parse: true
+    prompts:
+      - "查看进程树"
+      - "显示进程树"
+      - "pstree"
+
+  # 查看网络连接（串口已有root权限）
+  get_netstat:
+    command: "netstat -tulpn"  # 网络连接状态
+    need_parse: true
+    prompts:
+      - "查看网络连接"
+      - "显示网络状态"
+      - "netstat"
+      - "网络端口"
+
+  # 查看网络接口（串口已有root权限）
+  get_network_interfaces:
+    command: "ifconfig -a"  # 所有网络接口
+    need_parse: true
+    prompts:
+      - "查看网络接口"
+      - "显示网络接口"
+      - "ifconfig"
+      - "网络配置"
+
+  # 查看路由表（串口已有root权限）
+  get_routes:
+    command: "ip route"  # 路由表
+    need_parse: true
+    prompts:
+      - "查看路由表"
+      - "显示路由信息"
+      - "路由表"
+      - "ip route"
+
+  # 查看内核参数（串口已有root权限）
+  get_sysctl:
+    command: "sysctl -a"  # 所有内核参数
+    need_parse: true
+    streaming: true
+    streaming_timeout: 5.0
+    prompts:
+      - "查看内核参数"
+      - "显示sysctl参数"
+      - "内核配置参数"
+
+  # 查看文件系统信息（串口已有root权限）
+  get_filesystems:
+    command: "cat /proc/filesystems"  # 支持的文件系统
+    need_parse: true
+    prompts:
+      - "查看文件系统"
+      - "显示支持的文件系统"
+      - "文件系统列表"
+
+  # 查看挂载点（串口已有root权限）
+  get_mounts:
+    command: "cat /proc/mounts"  # 挂载点信息
+    need_parse: true
+    prompts:
+      - "查看挂载点"
+      - "显示挂载信息"
+      - "mounts"
+
+  # 查看设备树信息（串口已有root权限，如果支持）
+  get_devicetree:
+    command: "find /proc/device-tree -type f 2>/dev/null | head -20 | xargs -I {} sh -c \"echo {}; cat {}\""  # 设备树信息
+    need_parse: true
+    prompts:
+      - "查看设备树"
+      - "显示设备树信息"
+      - "devicetree"
+
+  # 查看电源管理信息（串口已有root权限）
+  get_power_info:
+    command: "cat /sys/power/state 2>/dev/null || echo \"Power management info not available\""  # 电源状态
+    need_parse: true
+    prompts:
+      - "查看电源管理信息"
+      - "显示电源状态"
+      - "电源信息"
+
+  # 查看内核调试文件系统（串口已有root权限）
+  get_debugfs:
+    command: "ls -la /sys/kernel/debug 2>/dev/null | head -50 || echo \"DebugFS not mounted\""  # 调试文件系统
+    need_parse: true
+    prompts:
+      - "查看调试文件系统"
+      - "显示debugfs内容"
+      - "内核调试信息"
+
+  # 查看内核日志缓冲区大小（串口已有root权限）
+  get_dmesg_size:
+    command: "dmesg | wc -l"  # 内核日志条数
+    need_parse: true
+    prompts:
+      - "查看内核日志条数"
+      - "dmesg大小"
+      - "内核日志数量"
+
+  # 清空内核日志缓冲区（串口已有root权限）
+  clear_dmesg:
+    command: "dmesg -c"  # 清空内核日志
+    need_parse: true
+    prompts:
+      - "清空内核日志"
+      - "清除 dmesg"
+      - "清理内核日志缓冲区"
+
+  # 查看特定关键词的内核日志（串口已有root权限）
+  # 注意：prompts中的{keyword}会被AI提取并传递给命令
+  search_dmesg:
+    command: "dmesg | grep -i {keyword} | tail -50"  # 搜索内核日志
+    need_parse: true
+    prompts:
+      - "搜索内核日志中的{keyword}"
+      - "在dmesg中查找{keyword}"
+      - "查找包含{keyword}的内核消息"
+      - "搜索包含{keyword}的内核日志"
+
+  # 查看系统调用统计（串口已有root权限）
+  get_syscalls:
+    command: "cat /proc/sys/kernel/random/uuid 2>/dev/null && cat /proc/sys/kernel/* 2>/dev/null | head -20"  # 系统调用相关
+    need_parse: true
+    prompts:
+      - "查看系统调用信息"
+      - "内核系统调用"
+
+  # 查看内核线程（串口已有root权限）
+  get_kthreads:
+    command: "ps -eT | grep -E \"\\[.*\\]\""  # 内核线程
+    need_parse: true
+    prompts:
+      - "查看内核线程"
+      - "显示内核线程列表"
+      - "kthreads"
+
+  # 查看IO统计（串口已有root权限）
+  get_iostat:
+    command: "cat /proc/diskstats"  # 磁盘IO统计
+    need_parse: true
+    prompts:
+      - "查看IO统计"
+      - "显示磁盘IO"
+      - "磁盘统计信息"
+
+  # 查看系统负载（串口已有root权限）
+  get_loadavg:
+    command: "cat /proc/loadavg"  # 系统负载
+    need_parse: true
+    prompts:
+      - "查看系统负载"
+      - "显示负载平均值"
+      - "loadavg"
+
+  # 查看系统启动时间（串口已有root权限）
+  get_uptime:
+    command: "cat /proc/uptime"  # 系统运行时间
+    need_parse: true
+    prompts:
+      - "查看系统运行时间"
+      - "显示uptime"
+      - "系统启动时间"
+
+  # 查看内核符号表（串口已有root权限）
+  get_kallsyms:
+    command: "cat /proc/kallsyms | head -100"  # 内核符号表（前100个）
+    need_parse: true
+    prompts:
+      - "查看内核符号表"
+      - "显示内核符号"
+      - "kallsyms"
+
+  # ========== LED 控制命令 ==========
+  
+  # 列出所有可用的LED设备（串口已有root权限）
+  list_leds:
+    command: "ls -la /sys/class/leds/"  # 直接执行（如果已有root权限）
+    need_parse: true
+    prompts:
+      - "列出LED设备"
+      - "查看可用的LED"
+      - "显示LED列表"
+      - "有哪些LED"
+
+  # 查看LED当前状态（串口已有root权限）
+  get_led_status:
+    command: "cat /sys/class/leds/{led_name}/trigger 2>/dev/null && echo \"---\" && cat /sys/class/leds/{led_name}/brightness 2>/dev/null"  # 查看LED状态
+    need_parse: true
+    prompts:
+      - "查看{led_name}LED的状态"
+      - "显示{led_name}LED信息"
+      - "{led_name}LED当前配置"
+
+  # 设置LED触发模式为心跳（串口已有root权限）
+  set_led_heartbeat:
+    command: "echo heartbeat > /sys/class/leds/{led_name}/trigger"  # 设置心跳触发模式
+    need_parse: true
+    prompts:
+      - "将{led_name}LED设置为心跳模式"
+      - "设置{led_name}LED为心跳触发"
+      - "开启{led_name}LED心跳效果"
+      - "让{led_name}LED心跳闪烁"
+      - "配置{led_name}LED心跳"
+      - "LED{led_name}设置为心跳"
+
+  # 设置LED触发模式（通用，串口已有root权限）
+  set_led_trigger:
+    command: "echo {trigger} > /sys/class/leds/{led_name}/trigger"  # 设置LED触发模式
+    need_parse: true
+    prompts:
+      - "将{led_name}LED触发模式设置为{trigger}"
+      - "设置{led_name}LED为{trigger}模式"
+      - "配置{led_name}LED触发为{trigger}"
+
+  # 设置LED亮度（串口已有root权限）
+  set_led_brightness:
+    command: "echo {brightness} > /sys/class/leds/{led_name}/brightness"  # 设置LED亮度 (0-255)
+    need_parse: true
+    prompts:
+      - "设置{led_name}LED亮度为{brightness}"
+      - "将{led_name}LED调亮到{brightness}"
+      - "调整{led_name}LED亮度到{brightness}"
+
+  # 打开LED（串口已有root权限）
+  turn_on_led:
+    command: "echo 1 > /sys/class/leds/{led_name}/brightness && echo none > /sys/class/leds/{led_name}/trigger"  # 打开LED（关闭触发）
+    need_parse: true
+    prompts:
+      - "打开{led_name}LED"
+      - "点亮{led_name}LED"
+      - "开启{led_name}LED"
+
+  # 关闭LED（串口已有root权限）
+  turn_off_led:
+    command: "echo 0 > /sys/class/leds/{led_name}/brightness"  # 关闭LED
+    need_parse: true
+    prompts:
+      - "关闭{led_name}LED"
+      - "熄灭{led_name}LED"
+      - "关闭{led_name}LED"
+
+  # 查看LED可用的触发模式（串口已有root权限）
+  get_led_triggers:
+    command: "cat /sys/class/leds/{led_name}/trigger"  # 查看可用触发模式
+    need_parse: true
+    prompts:
+      - "查看{led_name}LED可用的触发模式"
+      - "显示{led_name}LED支持的触发方式"
+      - "{led_name}LED有哪些触发模式"
+
+  # 设置LED为定时器触发（串口已有root权限）
+  set_led_timer:
+    command: "echo timer > /sys/class/leds/{led_name}/trigger && echo {delay_on} > /sys/class/leds/{led_name}/delay_on && echo {delay_off} > /sys/class/leds/{led_name}/delay_off"  # 设置定时器触发
+    need_parse: true
+    prompts:
+      - "将{led_name}LED设置为定时器模式，开启{delay_on}ms，关闭{delay_off}ms"
+      - "设置{led_name}LED定时闪烁，亮{delay_on}ms，灭{delay_off}ms"
+
+  # 设置LED为默认触发（关闭所有触发，串口已有root权限）
+  set_led_none:
+    command: "echo none > /sys/class/leds/{led_name}/trigger"  # 关闭触发模式
+    need_parse: true
+    prompts:
+      - "关闭{led_name}LED的触发模式"
+      - "将{led_name}LED设置为无触发"
+      - "停止{led_name}LED自动触发"
+

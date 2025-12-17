@@ -59,6 +59,8 @@ class Command:
     command: str
     need_parse: bool
     prompts: List[str]
+    streaming: bool = False  # 是否为持续输出命令（如 logcat），如果是则使用更长的读取时间
+    streaming_timeout: float = 10.0  # 持续输出命令的读取超时时间（秒）
 
 @dataclass
 class Config:
@@ -118,7 +120,9 @@ class Config:
                         config.commands[cmd_id] = Command(
                             command=raw_command,
                             need_parse=cmd_data.get('need_parse', False),
-                            prompts=cmd_data.get('prompts', [])
+                            prompts=cmd_data.get('prompts', []),
+                            streaming=cmd_data.get('streaming', False),
+                            streaming_timeout=cmd_data.get('streaming_timeout', 10.0)
                         )
                         logger.debug(f"Loaded command {cmd_id}: {repr(config.commands[cmd_id].command)}")
 
@@ -255,8 +259,12 @@ class SerialConnection:
                 start_time = time.time()
                 last_response_time = start_time
                 
+                # 确定读取超时时间：如果是持续输出命令，使用更长的超时时间
+                read_timeout = command.streaming_timeout if command.streaming else self.read_timeout
+                logger.info(f"Using read timeout: {read_timeout}s (streaming: {command.streaming})")
+                
                 # 持续读取直到超时或连续一段时间没有新数据
-                while (time.time() - start_time) < self.read_timeout:
+                while (time.time() - start_time) < read_timeout:
                     if self.serial_port.in_waiting:
                         response = self.serial_port.readline()
                         logger.info(f"Raw response: {response}")
@@ -264,14 +272,20 @@ class SerialConnection:
                             responses.append(response)
                             last_response_time = time.time()
                     else:
-                        # 如果没有新数据，等待一小段时间
-                        if (time.time() - last_response_time) > 0.1:  # 100ms内没有新数据，认为响应完成
-                            break
+                        # 对于持续输出命令，即使暂时没有新数据也继续等待
+                        # 对于普通命令，100ms内没有新数据则认为响应完成
+                        idle_threshold = 0.5 if command.streaming else 0.1
+                        if (time.time() - last_response_time) > idle_threshold:
+                            if not command.streaming:
+                                # 普通命令：没有新数据就停止
+                                break
+                            # 持续输出命令：即使暂时没有新数据，也继续等待直到总超时
                         time.sleep(0.01)  # 短暂等待
 
             if not responses:
                 logger.error("No response received within timeout")
-                error_msg = f"[MCP2Serial v{VERSION}] Command timeout - no response within {self.read_timeout} second(s)\n"
+                timeout_used = command.streaming_timeout if command.streaming else self.read_timeout
+                error_msg = f"[MCP2Serial v{VERSION}] Command timeout - no response within {timeout_used} second(s)\n"
                 error_msg += f"Command sent: {cmd_str.strip()}\n"
                 error_msg += f"Command bytes ({len(cmd_bytes)} bytes): {' '.join([f'0x{b:02X}' for b in cmd_bytes])}\n"
                 error_msg += "Please check:\n"
